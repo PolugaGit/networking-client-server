@@ -25,7 +25,7 @@ class ChatClient:
     # A helper function that sends one of three types of messages to the server with the proper encoding. 
     def send(self, type: DataType, payload: str) -> None:
         # Creates a JSON string with type and payload and sends it to the server
-        message = f"{{ \"type\":{DataType}, \"payload\":\"{message}\" }}"
+        message = f"{{ \"type\":{type}, \"payload\":\"{payload}\" }}"
         json_message = json.loads(message)
         self.client.send(json_message)
     
