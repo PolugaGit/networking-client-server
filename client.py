@@ -41,7 +41,6 @@ class ChatClient:
             elif content == "2":
                 self.handleRefresh()
             elif content == "3":
-                self.send(DataType.DISCONNECT, "Client disconnected.")
                 print("Disconnected from chat.")
                 break
             else:

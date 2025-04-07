@@ -62,7 +62,6 @@ class Server:
     # A helper function to handle refresh requests from clients. This function should send a list of messages
     # back to the client.
     def handle_refresh(self, client) -> None:
-        print("Inside handle refresh")
         with self.lock:
             # TODO: convert the entire list of messages and send it to the client
             all_msgs = [m.to_dict() for m in self.messages]
