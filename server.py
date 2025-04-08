@@ -32,6 +32,8 @@ class Server:
         try:
             while True:
                 data = client.recv(4096)
+                if data == b'':
+                    break
                 # TODO: Receive data from the client, decode it, then call the appropriate function
                 data_dict = json.loads(data.decode("utf-8"))
        
