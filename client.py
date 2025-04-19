@@ -19,14 +19,31 @@ class ChatClient:
         print(f"Connected to server: {host} {port}")
         
         self.username = input("Enter your username: ")
-        self.send(DataType.USERNAME, self.username)
+        self.password = input("Enter your password: ")
+        self.send(DataType.USERNAME, self.username, self.password)
+
+        # Wait for authentication/registration response
+        response = self.client.recv(4096)
+
+        try:
+            response_data = json.loads(response.decode())
+            if response_data["success"]:
+                print(f"\n{response_data['message']}")
+            else:
+                print("Please try again.")
+        except json.JSONDecodeError:
+            print("Error: Authentication failed")
+            self.client.close()
+            sys.exit(1)
+
 
     # A helper function that sends one of three types of messages to the server with the proper encoding. 
-    def send(self, type: DataType, payload: str) -> None:
+    def send(self, type: DataType, payload: str, password: str) -> None:
         # TODO: Create a JSON string with type and payload and send it to the server
         message = {
             "type": type.name,  # Convert enum to string
-            "payload": payload
+            "payload": payload,
+            "password": password
         }
         self.client.sendall(json.dumps(message).encode())
     
@@ -53,12 +70,12 @@ class ChatClient:
     def handleMessage(self) -> None:
         body = input("Enter your message: ")
         msg = Message(sender_id=self.username, body=body, timestamp=self.getTimestamp())
-        self.send(DataType.MESSAGE, json.dumps(msg.__dict__))
+        self.send(DataType.MESSAGE, json.dumps(msg.__dict__), self.password)
 
     
     # Handles user refresh requests. Sends a request to the server then displays message log.
     def handleRefresh(self) -> None:
-        self.send(DataType.REFRESH, "")
+        self.send(DataType.REFRESH, "", self.password)
         response = self.client.recv(4096)
         messages_data = json.loads(response.decode())
         

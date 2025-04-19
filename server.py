@@ -19,6 +19,13 @@ class Server:
         self.server.bind((host, port))
         self.server.listen()
 
+        # List of static users that can connect to the server
+        self.user_credentials = {
+            "user1" : "pass1",
+            "user2" : "pass2",
+            "user3" : "pass3"
+        }
+
         self.messages: List[Message] = []
         self.lock: threading.Lock = threading.Lock()
         
@@ -29,6 +36,7 @@ class Server:
         print(f"New client connected from address: {addr}")
         # should we add something here to catch username? 
         username: str = ""
+        password: str = ""
         try:
             while True:
                 data = client.recv(4096)
@@ -43,13 +51,29 @@ class Server:
                     self.handle_refresh(client)
                 elif dtype == DataType.USERNAME:
                     username = data_dict.get("payload")
-                
+                    password = data_dict.get("password")
+
+                    if not self.handle_authentication(username, password):
+                        client.close()
+                        return 
+                    
+                    print(f"User {username} authenticated successfully.")
+                    client.sendall(json.dumps({"success": True, "message": "Authentication successful"}).encode())
+
+
         except Exception as e:
             print(f"Error with {username}: {e}")
         finally:
             client.close()
             print(f"{username} disconnected")
-            
+    
+
+    # A helper function to handle authentication 
+    def handle_authentication(self, username, password):
+        if username not in self.user_credentials:
+            return False
+        return self.user_credentials[username] == password
+    
     # A helper function to handle new messages from clients. This function should parse the data into a 
     # Message object then add it to the list of messages.
     def handle_message(self, data_dict) -> None:
