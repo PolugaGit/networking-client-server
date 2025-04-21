@@ -40,15 +40,16 @@ class Server:
         try:
             while True:
                 data = client.recv(4096)
+                if (data == b''):
+                    break
                 # TODO: Receive data from the client, decode it, then call the appropriate function
                 data_dict = json.loads(data.decode("utf-8"))
-       
                 dtype = DataType[data_dict.get("type")]
-
                 if dtype == DataType.MESSAGE:
                     self.handle_message(data_dict)
                 elif dtype ==  DataType.REFRESH:
-                    self.handle_refresh(client)
+                    cache_amnt = int(data_dict.get("payload"))
+                    self.handle_refresh(client, cache_amnt)
                 elif dtype == DataType.USERNAME:
                     username = data_dict.get("payload")
                     password = data_dict.get("password")
@@ -85,12 +86,12 @@ class Server:
         
     # A helper function to handle refresh requests from clients. This function should send a list of messages
     # back to the client.
-    def handle_refresh(self, client) -> None:
+    def handle_refresh(self, client, cache_amnt) -> None:
         with self.lock:
             # TODO: convert the entire list of messages and send it to the client
-            all_msgs = [m.to_dict() for m in self.messages]
+            all_msgs = [m.to_dict() for m in self.messages[cache_amnt:]]
             response = json.dumps(all_msgs).encode("utf-8")
-            client.sendall(response)       
+            client.sendall(response)
     
     # This is the main program loop. This function waits for client connections then calls handle_client as needed
     def run(self) -> None:

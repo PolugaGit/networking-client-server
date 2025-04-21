@@ -3,6 +3,7 @@ import socket
 import sys
 import time
 from typing import List
+import threading
 
 from message import Message, DataType
 
@@ -17,6 +18,10 @@ class ChatClient:
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.connect((host, port))
         print(f"Connected to server: {host} {port}")
+        # Messages stored for caching.
+        self.messages = []
+        # Check for if the client is running. If it is false then all threads stop.
+        self.running = True
         
         self.username = input("Enter your username: ")
         self.password = input("Enter your password: ")
@@ -51,20 +56,22 @@ class ChatClient:
     def run(self) -> None:
         while True:
             print()
-            content = input("Enter 1 to send a message, 2 to refresh messages, or 3 to quit and disconnect: ")
-            
+            content = input("Enter 1 to send a message or 2 to quit and disconnect: ")
             if content == "1":
                 self.handleMessage()
             elif content == "2":
-                self.handleRefresh()
-            elif content == "3":
                 print("Disconnected from chat.")
+                self.running = False
                 break
             else:
                 print("Invalid input.")
-        
+
         self.client.close()
 
+    def background_refresh(self):
+        while self.running:
+            time.sleep(1)
+            self.handleRefresh()
 
         # Handles user message send requests. Sends a message to the server with username, body, and timestamp.
     def handleMessage(self) -> None:
@@ -75,12 +82,13 @@ class ChatClient:
     
     # Handles user refresh requests. Sends a request to the server then displays message log.
     def handleRefresh(self) -> None:
-        self.send(DataType.REFRESH, "", self.password)
+        self.send(DataType.REFRESH, f"{len(self.messages)}", self.password)
         response = self.client.recv(4096)
         messages_data = json.loads(response.decode())
-        
-        messages = [Message(**msg) for msg in messages_data]
-        self.print_messages(messages)
+
+        self.messages += [Message(**msg) for msg in messages_data]
+        if len(messages_data) != 0:
+            self.print_messages(self.messages)
 
        
     # A helper function to print the list of messages. 
@@ -107,4 +115,7 @@ if __name__ == "__main__":
     serv_port: int = int(sys.argv[2])
 
     client: ChatClient = ChatClient(serv_addr, serv_port)
-    client.run()
+    thread1 = threading.Thread(target=client.run)
+    thread1.start()
+    thread2 = threading.Thread(target=client.background_refresh)
+    thread2.start()
